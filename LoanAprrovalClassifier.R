@@ -1,9 +1,3 @@
-# R Script for PBA Coursework, Group 11
-# Group Names:
-# Loan Approval Classifier
-# Note: We also submitted a Rmd file that is easier to execute part by part
-
-
 
 # Part 1: Data Pre-Processing
 
@@ -275,22 +269,13 @@ summary(numeric_columns)
 
 # 3: Modelling and Evaluation
 
-# Each member of the group will have their 2 models here.
-# Our common model is Logistic Regression
 # Each model is evaluated with accuracy, confusion matrix, and ROC Curve and AUC (Area under Curve)
-# Each member uses different evaluation methods, with the holdout method being common
-# 
 # Split dataframe into train and test
 
 split <- sample.split(df$STATUS, SplitRatio = 0.7)
 train_df <- df[split, ]
 test_df <- df[!split, ]
 
-# Luke: Logistic Regression and Support Vector Machine (SVM)
-
-# For my shared model (Logistic Regression) I will try two validation methods, 
-# the train/test dataset split and k-fold cross validation. 
-# The better validation method will be used for comparison with other team members
 
 # Holdout Method
 
@@ -382,8 +367,10 @@ plot(roc(y_true, lr_probs), print.auc=TRUE)
 # However, I would still recommend using the holdout method for logistic regression
 # as it predicts the positive class better.
 
+-----------------------------------------------------------------------
+
 ##### Support Vector Machine
-# For this model, only the holdout method will be used, since it is too complex to be used with k-fold. When trying this model with k-fold, the model took over 10 minutes to train.
+# For this model, only the holdout method will be used, since it is too complex to be used with k-fold.
 # 
 # This model uses the same train/test split as logistic regression for consistency.
 # The linear kernel hyper-parameter is chosen here as it is the simplest SVM kernel, built for linear data.
@@ -410,85 +397,8 @@ text(0.5, 0.2, auc(roc_obj), adj = c(0, 1), col = "black", cex = 1)
 
 # The AUC in this case is just above 0.5, indicating the worst performance of all the models so far.
 
-# Model Recommendation
-# From the models I trained, I would recommend the logistic regression holdout method. While it obtained a slightly lower accuracy than the others, it gave a more balanced output from both classes, as seen in the confusion matrix. 
+-------------------------------------------------------------------
 
-# --------------------------------------------------------------------------------
-  
-## Anu: Logistic Regression and Random Forest
-
-# LOGISTIC REGRESSION using K-fold Cross Validation
-# 
-# copying orginal dataframe to another variable
-new_df <- df
-
-
-
-# Create training control with 10-fold CV
-
-ctrl_lg <- trainControl(method = "cv", number = 10)
-
-
-# Train logistic regression model
-
-# Train the model
-logReg_model <- train(
-  form = STATUS ~ ., 
-  data = new_df,
-  method = "glmnet",
-  family = "binomial",
-  trControl = ctrl_lg,
-  tuneGrid = expand.grid(alpha = seq(0, 1, by = 0.1), lambda = seq(0.001, 1, length = 20)))
-
-# Print the cross-validated results
-
-print(logReg_model)
-
-# Make predictions
-predictions_logreg<- predict(logReg_model, newdata = new_df)
-
-# Evaluate the model
-
-conf_matrix_logreg <- confusionMatrix(predictions_logreg, new_df$STATUS)
-
-print("Confusion Matrix Of Logistic Regression:")
-
-print(conf_matrix_logreg)
-
-accuracy_logreg<- conf_matrix_logreg$overall["Accuracy"]
-
-# The confusion matrix reveals that this k-fold model performs well for 0's 
-# compared to 1s and it give overall accuraccy of 64.61%.
-# 
-# Visualizing the logistic regression to understand well.Here TP=25,TN=21367,
-# FN=11703,FP=15. So this model doesn't work good.
-
-cm_lg <- conf_matrix_logreg$table
-
-# Create a data frame from the matrix
-cm_df_lg <- as.data.frame(as.table(cm_lg))
-
-# Plot confusion matrix
-ggplot(cm_df_lg, aes(x = Reference, y = Prediction, fill = Freq)) +
-  geom_tile() +
-  geom_text(aes(label = Freq), vjust = 1) +
-  scale_fill_gradient(low = "white", high = "steelblue") +
-  labs(x = "Actual", y = "Predicted", title = "Logistic Regression Confusion Matrix")
-
-
-# Print the results
-
-print(paste("Logistic Regression Model Accuracy: ", round(accuracy_logreg * 100, 2), "%"))
-
-y_true <- new_df$STATUS
-
-# Logistic regression predictions
-lr_probs = predict(logReg_model, newdata = new_df, type = "prob")[,2]
-# Plot ROC
-plot(roc(y_true, lr_probs), print.auc=TRUE)
-
-# In this auc =0.525An,AUC of 0.5 means the model is no better than random guessing.
-# So we can't consider it as a good model
 
 # RandomForest Using Kfold
 
@@ -537,10 +447,9 @@ ggplot(cm_df, aes(x = Reference, y = Prediction, fill = Freq)) +
 # with an accuracy of 78.3% .Here TP=6790,TN=19152,FP=2230 and FN=6790.
 
 -----------------------------------------------------------------------------
-#### Meenu: Logistic Regression and Quadrant Discriminant Analysis (QDA)
-  
-# QDA using Holdout method
-  # Train the Quadratic Discriminant Analysis model
+
+ # QDA using Holdout method
+ # Train the Quadratic Discriminant Analysis model
 qda_model <- qda(STATUS ~ ., data = train_df)
 
 # Make predictions on the test set
@@ -636,125 +545,9 @@ print("Cross-Validation Results:")
 print(mean(cv_results))
 
 # Using K fold method the accuracy is comparable with holdout method. In both only an average performance is visible.
-# 
-# 
-# LOGISTIC REGRESSION USING HOLDOUT METHOD
-
-# Fit logistic regression model
-logistic_model <- glm(STATUS ~ ., data = train_df, family = "binomial")
-
-# Make predictions on the test set
-predicted_probs <- predict(logistic_model, newdata = test_df, type = "response")
-predicted_class <- ifelse(predicted_probs > 0.399, 1, 0)
-
-# Create a data frame for comparison
-comparison <- data.frame(Actual = test_df$STATUS, Predicted = predicted_class)
-
-# Print accuracy
-accuracy <- mean(comparison$Actual == comparison$Predicted)
-print(paste("Accuracy:", accuracy))
-
-# Print the logistic regression summary
-summary(logistic_model)
-
-#Threshold is set to 0.399 as it gave maximum accuracy
-
-confusionMatrix(factor(comparison$Predicted), factor(comparison$Actual))
-
-# Here also the model is not predicting 1s properly.
-
-# Calculate performance metrics
-TP <- sum(comparison$Actual == 1 & comparison$Predicted == 1)
-TN <- sum(comparison$Actual == 0 & comparison$Predicted == 0)
-FP <- sum(comparison$Actual == 0 & comparison$Predicted == 1)
-FN <- sum(comparison$Actual == 1 & comparison$Predicted == 0)
-
-precision <- TP / (TP + FP)
-recall <- TP / (TP + FN)
-f1_score <- 2 * (precision * recall) / (precision + recall)
-accuracy <- (TP + TN) / (TP + TN + FP + FN)
-
-# Print performance metrics
-print(paste("Precision:", precision))
-print(paste("Recall:", recall))
-print(paste("F1 Score:", f1_score))
-print(paste("Accuracy:", accuracy))
-
-# LOGISTIC USING K-FOLD METHOD
-
-# Define the number of folds
-num_folds <- 4
-
-# Create a data partitioning object for k-fold cross-validation
-folds <- createFolds(df$STATUS, k = num_folds, list = TRUE, returnTrain = FALSE)
-
-# Initialize a vector to store cross-validation results
-cv_results <- numeric(num_folds)
-
-# Perform k-fold cross-validation
-for (i in 1:num_folds) {
-  # Split the data into training and test sets for this fold
-  fold_train_data <- df[-folds[[i]], ]
-  fold_test_data <- df[folds[[i]], ]
-  
-  # Fit logistic regression model
-  logistic_model <- glm(STATUS ~ ., data = fold_train_data, family = "binomial")
-  
-  # Make predictions on the test set
-  predicted_probs <- predict(logistic_model, newdata = fold_test_data, type = "response")
-  predicted_class <- ifelse(predicted_probs > 0.5, 1, 0)
-  
-  # Create a data frame for comparison
-  comparison <- data.frame(Actual = fold_test_data$STATUS, Predicted = predicted_class)
-  
-  # Calculate accuracy for this fold
-  accuracy <- mean(comparison$Actual == comparison$Predicted)
-  cv_results[i] <- accuracy
-}
-
-# Display cross-validation results
-
-print("Mean Accuracy")
-print(mean(cv_results))
-
-# In Both K-fold and Holdout method accuracy is comparable.
-# If taking QDA and Logistic Regression both are performing on an average level only, accuracy of around 64%.
-# Both model fail to predict Status 1 correctly.
+ 
 
 # -----------------------------------------------------------------------------
-  #### Harshita: Logistic Regression and Naïve Bayes
-
-# Extract features (all columns except 'STATUS')
-features <- df[, !(names(df) %in% c("STATUS"))]
-
-# Extract labels (only 'STATUS' column)
-label <- df$STATUS
-
-# Define the logistic regression model
-log_model <- glm(STATUS ~ ., data = train_df, family = binomial)
-
-# Make predictions on the test set
-predictions <- predict(log_model, newdata = test_df, type = "response")
-predicted_labels <- ifelse(predictions > 0.4, 1, 0)
-
-# Evaluate the model
-accuracy <- sum(predicted_labels == test_df$STATUS) / length(test_df$STATUS) * 100
-conf_matrix <- table(test_df$STATUS, predicted_labels)
-classification_report <- confusionMatrix(as.factor(predicted_labels), as.factor(test_df$STATUS))
-
-# Print the results
-print(paste("Logistic Model Accuracy: ", round(accuracy, 2), "%"))
-print("Confusion Matrix:")
-print(conf_matrix)
-print("Classification Report:")
-print(classification_report)
-
-# Create ROC Curve
-roc_curve <- roc(test_df$STATUS, predictions)
-auc_value <- auc(roc_curve)
-
-# Plot ROC Curve
-plot(roc_curve, col = "blue", main = "ROC Curve", sub = paste("AUC =", round(auc_value, 2)))
 
 # Naive Bayes Model
 
@@ -783,34 +576,7 @@ print("Classification Report:")
 print(classification_report)
 
 # -----------------------------------------------------------------------------
-  #### Mohit: Logistic Regression and Decision Tree
-
-# Build a logistic regression model
-logistic_model <- glm(STATUS ~ ., data = train_df, family = binomial)
-
-# Predict on the test set
-predicted <- predict(logistic_model, newdata = test_df, type = "response")
-
-# Threshold for classification
-predicted_class <- ifelse(predicted > 0.42, 1, 0)
-
-# Compare actual vs predicted values
-comparison <- data.frame(Actual = test_df$STATUS, Predicted = predicted_class)
-print(mean(comparison$Actual == comparison$Predicted))
-
-# Confusion matrix
-confusion_matrix <- table(comparison$Actual, comparison$Predicted)
-rownames(confusion_matrix) <- c("Actual_0", "Actual_1")
-colnames(confusion_matrix) <- c("Predicted_0", "Predicted_1")
-
-print("Confusion Matrix:")
-print(confusion_matrix)
-
-# Plot ROC Curve and calculate AUC
-roc_obj <- roc(test_df$STATUS, predicted)
-plot(roc_obj, main = "ROC Curve for Logistic Regression", col = "blue")
-text(0.5, 0.2, auc(roc_obj), adj = c(0, 1), col = "black", cex = 1)
-
+ 
 # Decision Tree
 
 # Create a training control with k-fold cross-validation
